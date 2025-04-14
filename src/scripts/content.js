@@ -1,7 +1,7 @@
 
 console.log("CONTENT SCRIPT LOADED");
 
-import { setupTracking, cleanupTracking } from "./utils/tracking.js";
+import { setupTracking, cleanupTracking } from "../utils/tracking.js";
 
 
 let lastVideoId = getVideoId();

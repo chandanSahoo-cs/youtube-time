@@ -6,10 +6,10 @@
   "permissions": ["tabs", "storage", "scripting"],
   "host_permissions": ["https://www.youtube.com/*"],
   "background": {
-    "service_worker": "src/background.js"
+    "service_worker": "background.js"
   },
   "action": {
-    "default_popup": "src/popup/popup.html",
+    "default_popup": "popup/popup.html",
     "default_icon": {
       "16": "default_icon.png",
       "48": "default_icon.png",
@@ -18,7 +18,7 @@
   },
   "content_scripts": [
     {
-      "js": ["src/content.js"],
+      "js": ["content.js"],
       "matches": ["https://www.youtube.com/*"],
       "type": "module"
     }
