@@ -1,0 +1,26 @@
+{
+  "manifest_version": 3,
+  "name": "YouTube Watch Tracker",
+  "version": "1.0",
+  "description": "Track time spent on YouTube and which videos you watched.",
+  "permissions": ["tabs", "storage", "scripting"],
+  "host_permissions": ["https://www.youtube.com/*"],
+  "background": {
+    "service_worker": "src/background.js"
+  },
+  "action": {
+    "default_popup": "src/popup/popup.html",
+    "default_icon": {
+      "16": "default_icon.png",
+      "48": "default_icon.png",
+      "128": "default_icon.png"
+    }
+  },
+  "content_scripts": [
+    {
+      "js": ["src/content.js"],
+      "matches": ["https://www.youtube.com/*"],
+      "type": "module"
+    }
+  ]
+}

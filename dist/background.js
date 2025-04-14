@@ -1,0 +1,1 @@
+chrome.runtime.onInstalled.addListener(()=>{console.log("YouTube Watch Tracker installed.")});chrome.runtime.onMessage.addListener((e,n,o)=>{e.type==="log"&&console.log("[FROM content.js]:",e.message)});
