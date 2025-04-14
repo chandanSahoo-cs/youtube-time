@@ -1,98 +1,117 @@
-console.log("Content script loaded");
+console.log("CONTENT SCRIPT LOADED");
 
-// Detect if we're on a new video after URL changes (single-page app behavior)
-let lastURL = location.href;
-const checkURLChange = () => {
-  if (location.href !== lastURL) {
-    lastURL = location.href;
-    console.log("lastURL: ", lastURL);
-    console.log("currentURL: ", location.href);
-    setTimeout(setupTracking, 1000); // wait a second to let new video load
-  }
-};
-setInterval(checkURLChange, 1000);
+function saveWatchData(title, url, totalWatchTime) {
+  const seconds = Math.round(totalWatchTime / 1000);
+  const entry = {
+    title,
+    url,
+    timeWatched: seconds,
+    watchedAt: new Date().toISOString(),
+  };
 
-// Core tracking logic
-function setupTracking() {
-  let retryCount = 0;
-
-  function tryFindVideo() {
-    const video = document.querySelector("video");
-
-    if (!video) {
-      retryCount++;
-      if (retryCount < 20) {
-        setTimeout(tryFindVideo, 500); // try again in 0.5s
-      } else {
-        console.log("Video element not found after retries.");
-      }
-      return;
-    }
-
-    console.log("Video found, starting tracking for:", document.title);
-
-    let watchStart = null;
-    let totalWatchTime = 0;
-    let videoTitle = document.title;
-    let videoURL = location.href;
-    let watchedAt = null;
-    // Start intial video tracking
-    (function startTimer() {
-      if (!watchStart && video.readyState !== 0 && !video.paused) {
-        watchStart = Date.now();
-        console.log("Played at", new Date(watchStart).toLocaleTimeString());
-        watchedAt = new Date().toISOString();
-      }
-    })();
-
-    // Play event listener
-    video.addEventListener("play", () => {
-      if (!watchStart) {
-        watchStart = Date.now();
-        console.log("Play at", new Date(watchStart).toLocaleTimeString());
-      }
+  chrome.storage.local.get(["watchHistory"], (res) => {
+    const history = res.watchHistory || [];
+    history.push(entry);
+    chrome.storage.local.set({ watchHistory: history }, () => {
+      console.log("Video entry saved:", entry);
     });
-
-    //pause event listener
-    video.addEventListener("pause", () => {
-      if (watchStart) {
-        const now = Date.now();
-        totalWatchTime += now - watchStart;
-        console.log(
-          "Paused. Time added:",
-          (now - watchStart) / 1000,
-          "seconds",
-        );
-        watchStart = null;
-        console.log("totalWatchTime : ", totalWatchTime / 1000);
-      }
-    });
-
-    window.addEventListener("beforeunload", () => {
-      if (watchStart) {
-        totalWatchTime += Date.now() - watchStart;
-      }
-
-      const seconds = Math.round(totalWatchTime / 1000);
-      if (seconds > 5) {
-        const entry = {
-          title: videoTitle,
-          url: videoURL,
-          timeWatched: seconds,
-          watchedAt: watchedAt,
-        };
-
-        chrome.storage.local.get(["watchHistory"], (res) => {
-          const history = res.watchHistory || [];
-          history.push(entry);
-          chrome.storage.local.set({ watchHistory: history }, () => {
-            console.log("Saved watch entry:", entry);
-          });
-        });
-      }
-    });
-  }
-
-  tryFindVideo();
+  });
 }
-setupTracking();
+
+let video = null;
+let watchStart = null;
+let totalTime = 0;
+
+function setupTracking() {
+  video = document.querySelector("video");
+  if (!video) {
+    console.log("Video element not found");
+    return;
+  }
+
+  console.log("Tracking video:", document.title);
+  watchStart = null;
+  totalTime = 0;
+
+  video.addEventListener("play", onPlay);
+  video.addEventListener("pause", onPause);
+  window.addEventListener("beforeunload", cleanupTracking);
+
+  if (!video.paused && !video.ended) {
+    console.log("Video is already being played");
+    onPlay();
+  }
+}
+
+function cleanupTracking() {
+  if (watchStart) {
+    totalTime += Date.now() - watchStart;
+    watchStart = null;
+  }
+
+  if (video) {
+    saveWatchData(document.title, location.href, totalTime);
+    video.removeEventListener("play", onPlay);
+    video.removeEventListener("pause", onPause);
+  }
+
+  video = null;
+  totalTime = 0;
+}
+
+function onPlay() {
+  if (!watchStart) {
+    watchStart = Date.now();
+    console.log("Video started");
+  }
+}
+
+function onPause() {
+  if (watchStart) {
+    totalTime += Date.now() - watchStart;
+    watchStart = null;
+    console.log("Video paused");
+  }
+}
+
+let lastVideoId = getVideoId();
+let isTracking = false;
+
+function getVideoId() {
+  const params = new URLSearchParams(location.search);
+  return params.get("v");
+}
+
+function checkRouteChange() {
+  const currentPath = location.pathname;
+  const currentVideoId = getVideoId();
+
+  if (currentPath === "/watch" || currentPath === "/shorts") {
+    if (!isTracking || currentVideoId !== lastVideoId) {
+      if (isTracking) {
+        console.log("Switching to new video");
+        cleanupTracking();
+      }
+      lastVideoId = currentVideoId;
+      setTimeout(setupTracking, 1000);
+      isTracking = true;
+    }
+  } else {
+    if (isTracking) {
+      console.log("Left video page");
+      cleanupTracking();
+      isTracking = false;
+      lastVideoId = null;
+    }
+  }
+}
+
+window.addEventListener("load", () => {
+  if (location.pathname === "/watch") {
+    lastVideoId = getVideoId();
+    setTimeout(setupTracking, 1000);
+    isTracking = true;
+  }
+});
+
+setInterval(checkRouteChange, 500);
