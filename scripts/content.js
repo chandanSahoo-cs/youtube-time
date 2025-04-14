@@ -5,6 +5,8 @@ let lastURL = location.href;
 const checkURLChange = () => {
   if (location.href !== lastURL) {
     lastURL = location.href;
+    console.log("lastURL: ", lastURL);
+    console.log("currentURL: ", location.href);
     setTimeout(setupTracking, 1000); // wait a second to let new video load
   }
 };
@@ -22,12 +24,12 @@ function setupTracking() {
       if (retryCount < 20) {
         setTimeout(tryFindVideo, 500); // try again in 0.5s
       } else {
-        console.log("❌ Video element not found after retries.");
+        console.log("Video element not found after retries.");
       }
       return;
     }
 
-    console.log("✅ Video found, starting tracking for:", document.title);
+    console.log("Video found, starting tracking for:", document.title);
 
     let watchStart = null;
     let totalWatchTime = 0;
@@ -38,17 +40,16 @@ function setupTracking() {
     (function startTimer() {
       if (!watchStart && video.readyState !== 0 && !video.paused) {
         watchStart = Date.now();
-        console.log("▶️ Play at", new Date(watchStart).toLocaleTimeString());
+        console.log("Played at", new Date(watchStart).toLocaleTimeString());
         watchedAt = new Date().toISOString();
       }
-      console.log(new Date(watchedAt).toLocaleTimeString());
     })();
 
     // Play event listener
     video.addEventListener("play", () => {
       if (!watchStart) {
         watchStart = Date.now();
-        console.log("▶️ Play at", new Date(watchStart).toLocaleTimeString());
+        console.log("Play at", new Date(watchStart).toLocaleTimeString());
       }
     });
 
@@ -58,7 +59,7 @@ function setupTracking() {
         const now = Date.now();
         totalWatchTime += now - watchStart;
         console.log(
-          "⏸️ Paused. Time added:",
+          "Paused. Time added:",
           (now - watchStart) / 1000,
           "seconds",
         );
@@ -85,7 +86,7 @@ function setupTracking() {
           const history = res.watchHistory || [];
           history.push(entry);
           chrome.storage.local.set({ watchHistory: history }, () => {
-            console.log("💾 Saved watch entry:", entry);
+            console.log("Saved watch entry:", entry);
           });
         });
       }
