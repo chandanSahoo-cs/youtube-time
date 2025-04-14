@@ -1,8 +1,9 @@
-export function saveWatchData(title, url, totalWatchTime) {
+export function saveWatchData(title, url, totalWatchTime,channelName) {
   const seconds = Math.round(totalWatchTime / 1000);
   const entry = {
     title,
     url,
+    channelName,
     timeWatched: seconds,
     watchedAt: new Date().toISOString(),
   };
